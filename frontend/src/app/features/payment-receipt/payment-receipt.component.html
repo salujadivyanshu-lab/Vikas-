@@ -1,0 +1,109 @@
+<main class="receipt-container">
+  <header class="form-header">
+    <div>
+      <a class="back-link" routerLink="/dashboard">&larr; Dashboard</a>
+      <h2>Receive Brokerage Payment</h2>
+      <span class="subtext">Settle outstanding balances, apply discounts/kasar, and issue receipts</span>
+    </div>
+    <div class="meta-tags">
+      <span class="badge receipt-badge">Receipt: #{{ receiptForm.get('receiptNo')?.value }}</span>
+      <span class="shortcut-tip"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to Save</span>
+    </div>
+  </header>
+
+  <div *ngIf="errorMessage()" class="receipt-feedback error" role="alert">{{ errorMessage() }}</div>
+  <div *ngIf="successMessage()" class="receipt-feedback success" role="status">{{ successMessage() }}</div>
+  <div *ngIf="isLoadingParties()" class="receipt-feedback" role="status">Loading parties...</div>
+
+  <form [formGroup]="receiptForm" (ngSubmit)="saveReceipt()" class="receipt-card" novalidate>
+    <div class="form-row three-col">
+      <div class="field">
+        <label for="receipt-date">Receipt Date*</label>
+        <input id="receipt-date" type="date" formControlName="receiptDate" class="input-control" tabindex="1" />
+      </div>
+      <div class="field">
+        <label for="payment-mode">Payment Mode*</label>
+        <select id="payment-mode" formControlName="paymentMode" class="input-control" tabindex="2">
+          <option value="UPI">UPI / GPay / PhonePe</option>
+          <option value="NEFT_RTGS">Bank Transfer (NEFT/RTGS)</option>
+          <option value="CASH">Cash</option>
+          <option value="CHEQUE">Cheque</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="reference-no">Ref / UTR / Cheque No.</label>
+        <input id="reference-no" type="text" formControlName="referenceNo" placeholder="e.g. UPI Ref or Cheque No." class="input-control" tabindex="3" />
+      </div>
+    </div>
+
+    <div class="form-row single-col">
+      <div class="party-select-box">
+        <div class="party-label-bar">
+          <label for="party-search">Select Party / Client*</label>
+          <span *ngIf="selectedParty()" class="selected-meta">
+            {{ selectedParty()?.contactPerson }} &bull; {{ selectedParty()?.city }} &bull; {{ selectedParty()?.mobile }}
+          </span>
+        </div>
+        <div class="autocomplete-wrapper">
+          <input id="party-search" type="text" [value]="partySearch()"
+            (input)="updatePartySearch($any($event.target).value)" (focus)="partyDropdownOpen.set(true)"
+            placeholder="Type party firm name, contact person, or phone..." class="input-control party-input"
+            autocomplete="off" aria-controls="party-options" [attr.aria-expanded]="partyDropdownOpen()" tabindex="4" />
+          <input type="hidden" formControlName="partyId" />
+          <div *ngIf="partyDropdownOpen()" id="party-options" class="dropdown-list">
+            <button type="button" *ngFor="let p of filteredParties()" (click)="selectParty(p)" class="dropdown-item">
+              <span class="item-main">
+                <span class="firm-name">{{ p.firmName }}</span>
+                <span class="firm-due" [class.text-danger]="p.currentDue > 0">Due: ₹{{ p.currentDue | number:'1.2-2' }}</span>
+              </span>
+              <small class="item-sub">{{ p.contactPerson }} &bull; {{ p.city }} &bull; {{ p.mobile }}</small>
+            </button>
+            <p class="empty-options" *ngIf="filteredParties().length === 0">No matching parties</p>
+          </div>
+        </div>
+        <small class="field-error" *ngIf="receiptForm.get('partyId')?.touched && !selectedParty()">Select a party from the list.</small>
+      </div>
+    </div>
+
+    <div class="settlement-strip">
+      <div class="strip-item">
+        <span class="strip-label">Previous Due (Payable)</span>
+        <div class="strip-val due-val">₹{{ payableAmount() | number:'1.2-2' }}</div>
+      </div>
+      <div class="strip-item">
+        <label class="strip-label" for="received-amount">Amount Received (₹)*</label>
+        <input id="received-amount" type="number" min="1" step="0.01" formControlName="receivedAmount"
+          class="input-control text-right highlight-input" tabindex="5" />
+        <small class="field-error" *ngIf="receiptForm.get('receivedAmount')?.touched && receiptForm.get('receivedAmount')?.invalid">Enter an amount greater than zero.</small>
+      </div>
+      <div class="strip-item">
+        <label class="strip-label" for="discount-amount">Discount / Kasar (₹)</label>
+        <input id="discount-amount" type="number" min="0" step="0.01" formControlName="discountAmount"
+          class="input-control text-right" tabindex="6" />
+      </div>
+      <div class="strip-item">
+        <span class="strip-label">Remaining Balance</span>
+        <div class="strip-val bal-val" [class.cleared]="remainingBalance() === 0">₹{{ remainingBalance() | number:'1.2-2' }}</div>
+      </div>
+    </div>
+
+    <div class="form-row single-col">
+      <div class="field">
+        <label for="receipt-remarks">Payment Remarks</label>
+        <input id="receipt-remarks" type="text" formControlName="remarks"
+          placeholder="e.g. Settle Sauda #4910 and partial #4912..." class="input-control" tabindex="7" />
+      </div>
+    </div>
+
+    <footer class="action-footer">
+      <label class="checkbox-label">
+        <input type="checkbox" formControlName="autoSendWhatsApp" />
+        Send WhatsApp receipt acknowledgment on Save
+      </label>
+      <div class="button-group">
+        <button type="button" (click)="resetForm()" class="btn btn-secondary">Cancel (Esc)</button>
+        <button type="submit" class="btn btn-save" [disabled]="isSaving() || isLoadingParties()" tabindex="8">{{ isSaving() ? 'Recording...' : 'Record Payment &amp; Send Receipt (Ctrl+Enter)' }}</button>
+      </div>
+    </footer>
+  </form>
+</main>

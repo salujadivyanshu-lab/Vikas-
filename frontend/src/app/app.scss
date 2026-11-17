@@ -1,0 +1,177 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f3f7f6;
+}
+
+:host > .main {
+  display: none !important;
+}
+
+:host > router-outlet {
+  display: none;
+}
+
+.app-shell {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #f4f7f6;
+}
+
+.app-sidebar {
+  width: 240px;
+  flex: 0 0 240px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  color: #e2e8f0;
+  padding: 24px 18px;
+  box-shadow: 8px 0 24px rgba(15, 23, 42, 0.12);
+}
+
+.brand-block {
+  padding: 8px 10px 18px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  margin-bottom: 18px;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.brand-name {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #e2e8f0;
+  padding: 12px 14px;
+  text-decoration: none;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-link svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-link:first-child svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: rgba(59, 130, 246, 0.18);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.3);
+}
+
+.app-content {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow: auto;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: block;
+}
+
+.logout-btn {
+  margin-top: 18px;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: #f8fafc;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    padding: 12px 14px;
+  }
+
+  .brand-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 8px 10px;
+    margin-bottom: 8px;
+  }
+
+  .brand-mark {
+    flex: 0 0 40px;
+    margin-bottom: 0;
+  }
+
+  .app-nav {
+    flex-direction: row;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+    width: auto;
+    white-space: nowrap;
+    padding: 10px 12px;
+  }
+
+  .logout-btn {
+    flex: 0 0 auto;
+    width: auto;
+    margin-top: 4px;
+    padding: 10px 14px;
+  }
+
+  .app-content {
+    min-width: 0;
+    width: 100%;
+    padding: 14px;
+  }
+}

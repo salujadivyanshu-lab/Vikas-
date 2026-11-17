@@ -1,0 +1,120 @@
+<main class="party-master-container">
+  <header class="master-header">
+    <div>
+      <h2>Party Master Directory</h2>
+      <p class="subtitle">Manage buyers, sellers/mills, contact details, and opening balances</p>
+    </div>
+    <div class="header-buttons">
+      <button class="btn btn-outline" routerLink="/dashboard">Back to Dashboard</button>
+      <button class="btn btn-primary" type="button" (click)="startNewParty()">+ Add New Party</button>
+    </div>
+  </header>
+
+  <p *ngIf="errorMessage()" class="feedback feedback-error" role="alert">{{ errorMessage() }}</p>
+  <p *ngIf="successMessage()" class="feedback feedback-success" role="status">{{ successMessage() }}</p>
+
+  <div class="master-layout">
+    <section class="directory-pane" aria-label="Party directory">
+      <div class="pane-toolbar">
+        <div class="role-tabs" aria-label="Filter parties by role">
+          <button type="button" [class.active]="selectedRoleTab() === 'ALL'" (click)="selectedRoleTab.set('ALL')">All <span>{{ roleCounts().ALL }}</span></button>
+          <button type="button" [class.active]="selectedRoleTab() === 'SELLER'" (click)="selectedRoleTab.set('SELLER')">Seller <span>{{ roleCounts().SELLER }}</span></button>
+          <button type="button" [class.active]="selectedRoleTab() === 'BUYER'" (click)="selectedRoleTab.set('BUYER')">Buyer <span>{{ roleCounts().BUYER }}</span></button>
+          <button type="button" [class.active]="selectedRoleTab() === 'BOTH'" (click)="selectedRoleTab.set('BOTH')">Both <span>{{ roleCounts().BOTH }}</span></button>
+        </div>
+        <input type="search" aria-label="Search parties" placeholder="Search firm, contact, phone, email, address..."
+          [value]="searchFilter()" (input)="searchFilter.set($any($event.target).value)" class="search-input" />
+        <label class="date-filter-label">
+          Due as of
+          <input type="date" [value]="asOfDate()" (change)="asOfDate.set($any($event.target).value); loadParties()" class="search-input" />
+        </label>
+        <select aria-label="Filter by city" class="search-input city-filter" [value]="cityFilter()" (change)="cityFilter.set($any($event.target).value)">
+          <option value="ALL">All cities</option>
+          <option *ngFor="let city of cities()" [value]="city">{{ city }}</option>
+        </select>
+        <div class="result-count">Showing {{ filteredParties().length }} of {{ parties().length }} parties</div>
+      </div>
+
+      <div class="parties-scroll-list">
+        <div *ngIf="isLoading()" class="empty-state" role="status">Loading parties...</div>
+        <article *ngFor="let p of filteredParties()" class="party-card" [class.selected]="activePartyId() === p.id">
+          <button type="button" class="party-card-select" (click)="editParty(p)" [attr.aria-label]="'Edit ' + p.firmName">
+            <span class="party-card-top">
+              <span class="firm-title">{{ p.firmName }}</span>
+              <span class="role-badge" [ngClass]="{'role-seller': p.role === 'SELLER', 'role-buyer': p.role === 'BUYER', 'role-both': p.role === 'BOTH'}">{{ p.role }}</span>
+            </span>
+            <span class="party-card-mid"><span class="contact-info">{{ p.contactPerson }} &bull; {{ p.city }}</span><span class="phone-info">{{ p.mobile }}</span></span>
+            <span class="party-card-bottom"><span class="due-display"><span class="due-label">Current Due:</span><span class="due-amount" [class.has-due]="p.currentDue > 0">₹{{ p.currentDue | number:'1.2-2' }}</span></span></span>
+          </button>
+          <div class="card-actions">
+            <button type="button" class="btn-icon wa-icon" (click)="openWhatsAppDirect(p, $event)" [attr.aria-label]="'WhatsApp ' + p.firmName" title="Direct WhatsApp">WA</button>
+            <button type="button" class="btn-icon del-icon" (click)="deleteParty(p, $event)" [attr.aria-label]="'Delete ' + p.firmName" title="Delete party">&times;</button>
+          </div>
+        </article>
+        <p *ngIf="!isLoading() && filteredParties().length === 0" class="empty-state">No parties match these filters.</p>
+        <button *ngIf="errorMessage() && !isLoading()" type="button" class="btn btn-outline retry-button" (click)="loadParties()">Retry</button>
+      </div>
+    </section>
+
+    <section class="form-pane" aria-label="Party details form">
+      <div class="form-pane-card">
+        <header class="form-pane-header">
+          <div>
+            <h3>{{ isEditing() ? 'Edit Party Profile' : 'Register New Party' }}</h3>
+            <span class="subtext">{{ isEditing() ? 'Updating details for active record' : 'Adding a new account to trade directory' }}</span>
+          </div>
+          <span class="shortcut-pill"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to Save</span>
+        </header>
+
+        <form [formGroup]="partyForm" (ngSubmit)="saveParty()" class="party-form" novalidate>
+          <div class="form-row two-col">
+            <div class="field"><label for="firm-name">Company / Firm Name*</label><input id="firm-name" type="text" formControlName="firmName" placeholder="e.g. Maa Ambae Chuda Mill" class="input-control" tabindex="1" /><small *ngIf="partyForm.get('firmName')?.touched && partyForm.get('firmName')?.invalid">Enter at least 2 characters.</small></div>
+            <div class="field"><label for="contact-person">Contact Person Name*</label><input id="contact-person" type="text" formControlName="contactPerson" placeholder="e.g. Mr. Mantu Ji" class="input-control" tabindex="2" /><small *ngIf="partyForm.get('contactPerson')?.touched && partyForm.get('contactPerson')?.invalid">Required field.</small></div>
+          </div>
+
+          <div class="form-row three-col">
+            <div class="field"><label for="party-mobile">Mobile Number (WhatsApp)*</label><input id="party-mobile" type="text" inputmode="numeric" formControlName="mobile" placeholder="10-digit number" maxlength="10" class="input-control" tabindex="3" /><small *ngIf="partyForm.get('mobile')?.touched && partyForm.get('mobile')?.invalid">Enter a valid 10-digit mobile.</small></div>
+            <div class="field"><label for="party-phone">Landline / Alt Phone</label><input id="party-phone" type="text" formControlName="phone" placeholder="Optional" class="input-control" tabindex="4" /></div>
+            <div class="field"><label for="party-email">Email Address</label><input id="party-email" type="email" formControlName="email" placeholder="account@trade.com" class="input-control" tabindex="5" /><small *ngIf="partyForm.get('email')?.touched && partyForm.get('email')?.invalid">Enter a valid email.</small></div>
+          </div>
+
+          <div class="form-row two-col">
+            <div class="field"><label for="party-city">City / Mandi Location*</label><input id="party-city" type="text" formControlName="city" placeholder="e.g. Gulabbagh, Gwalior, Delhi" class="input-control" tabindex="6" /><small *ngIf="partyForm.get('city')?.touched && partyForm.get('city')?.invalid">Required field.</small></div>
+            <div class="field"><label for="party-role">Trading Role*</label><select id="party-role" formControlName="role" class="input-control" tabindex="7"><option value="BOTH">Both (Can Buy &amp; Sell)</option><option value="SELLER">Seller / Supplier Mill Only</option><option value="BUYER">Buyer / Purchaser Only</option></select></div>
+          </div>
+
+          <div class="form-row single-col">
+            <div class="field"><label for="party-address">Complete Business / Mill Address</label><textarea id="party-address" formControlName="address" rows="2" placeholder="Warehouse / shop location, mandi road..." class="input-control" tabindex="8"></textarea></div>
+          </div>
+
+          <div class="balance-setup-box">
+            <div class="box-title">Opening Ledger Balance Configuration</div>
+            <div class="form-row two-col">
+              <div class="field"><label for="opening-balance">Opening Amount (₹)</label><input id="opening-balance" type="number" min="0" step="0.01" formControlName="openingBalance" class="input-control text-right highlight-amt" tabindex="9" /><small *ngIf="partyForm.get('openingBalance')?.touched && partyForm.get('openingBalance')?.invalid">Amount must be zero or greater.</small></div>
+              <div class="field"><label for="balance-type">Balance Nature</label><select id="balance-type" formControlName="balanceType" class="input-control" tabindex="10"><option value="RECEIVABLE">Receivable (Party owes you money)</option><option value="PAYABLE">Payable (You owe party money)</option></select></div>
+            </div>
+            <small class="box-hint">Set this when importing balances from an existing ledger or software.</small>
+          </div>
+
+          <footer class="form-actions">
+            <button type="button" (click)="resetForm()" class="btn btn-secondary">Cancel / Clear (Esc)</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isSaving()" tabindex="11">{{ isSaving() ? 'Saving...' : (isEditing() ? 'Update Party Record' : 'Save New Party') }} (Ctrl+Enter)</button>
+          </footer>
+        </form>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div *ngIf="pendingDelete() as party" class="dialog-backdrop" (click)="cancelDelete()">
+  <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title" (click)="$event.stopPropagation()">
+    <h3 id="delete-dialog-title">Delete party?</h3>
+    <p><strong>{{ party.firmName }}</strong> will be removed from the master directory. This cannot be undone.</p>
+    <p *ngIf="party.currentDue > 0" class="dialog-warning">Outstanding balance: ₹{{ party.currentDue | number:'1.2-2' }}. Settle it before deleting this party.</p>
+    <p *ngIf="errorMessage()" class="dialog-error" role="alert">{{ errorMessage() }}</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancelDelete()" [disabled]="isDeleting()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()" [disabled]="isDeleting() || party.currentDue > 0">{{ isDeleting() ? 'Deleting...' : 'Delete party' }}</button>
+    </div>
+  </section>
+</div>

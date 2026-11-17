@@ -1,0 +1,90 @@
+<main class="reports-page">
+  <header class="report-header">
+    <div>
+      <p class="eyebrow">BUSINESS INTELLIGENCE</p>
+      <h1>Reports</h1>
+      <p class="subtitle">Review deal activity and recorded collections over a selected period.</p>
+    </div>
+    <button type="button" class="export-button" (click)="downloadCsv()" [disabled]="isLoading() || activeCount() === 0" title="Download current report as CSV">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3" /></svg>
+      Export CSV
+    </button>
+    <button type="button" class="export-button" (click)="downloadPartyLedger()" [disabled]="isLoading() || activeReport() === 'RECEIPTS' || dealRows().length === 0 || (sellerFilter() === 'ALL' && buyerFilter() === 'ALL')" title="Export ledger for the selected party">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3" /></svg>
+      Export Party Ledger PDF
+    </button>
+  </header>
+
+  <section class="report-controls" aria-label="Report filters">
+    <div class="report-tabs" role="tablist" aria-label="Report type">
+      <button type="button" role="tab" [attr.aria-selected]="activeReport() === 'DEALS'" [class.active]="activeReport() === 'DEALS'" (click)="activeReport.set('DEALS')">Sauda Register</button>
+      <button type="button" role="tab" [attr.aria-selected]="activeReport() === 'INVOICES'" [class.active]="activeReport() === 'INVOICES'" (click)="activeReport.set('INVOICES')">Invoice Ledger</button>
+      <button type="button" role="tab" [attr.aria-selected]="activeReport() === 'RECEIPTS'" [class.active]="activeReport() === 'RECEIPTS'" (click)="activeReport.set('RECEIPTS')">Payment Receipts</button>
+    </div>
+    <div class="date-filters">
+      <label>From <input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" /></label>
+      <label>To <input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" /></label>
+      <label>Seller
+        <select [ngModel]="sellerFilter() === 'ALL' ? 'ALL' : (sellerFilter() || '').toString()" (ngModelChange)="onSellerFilterChange($event)">
+          <option value="ALL">All sellers</option>
+          <ng-container *ngFor="let party of partyOptions()">
+            <option *ngIf="party.role === 'SELLER' || party.role === 'BOTH'" [value]="(party.id || '').toString()">{{ party.firmName }}</option>
+          </ng-container>
+        </select>
+      </label>
+      <label>Buyer
+        <select [ngModel]="buyerFilter() === 'ALL' ? 'ALL' : (buyerFilter() || '').toString()" (ngModelChange)="onBuyerFilterChange($event)">
+          <option value="ALL">All buyers</option>
+          <ng-container *ngFor="let party of partyOptions()">
+            <option *ngIf="party.role === 'BUYER' || party.role === 'BOTH'" [value]="(party.id || '').toString()">{{ party.firmName }}</option>
+          </ng-container>
+        </select>
+      </label>
+      <button type="button" class="apply-button" (click)="loadReports()" [disabled]="isLoading() || fromDate() > toDate()">{{ isLoading() ? 'Loading...' : 'Apply' }}</button>
+    </div>
+  </section>
+
+  <p *ngIf="fromDate() > toDate()" class="error-message" role="alert">Start date must be before or equal to end date.</p>
+  <p *ngIf="errorMessage()" class="error-message" role="alert">{{ errorMessage() }}</p>
+
+  <section *ngIf="activeReport() === 'DEALS' || activeReport() === 'INVOICES'" class="summary-strip" aria-label="Deal report totals">
+    <div><span>Deals</span><strong>{{ dealRows().length }}</strong></div>
+    <div><span>Goods value</span><strong>₹{{ totalGoods() | number:'1.2-2' }}</strong></div>
+    <div><span>Brokerage billed</span><strong>₹{{ totalBrokerage() | number:'1.2-2' }}</strong></div>
+  </section>
+  <section *ngIf="activeReport() === 'RECEIPTS'" class="summary-strip" aria-label="Receipt report totals">
+    <div><span>Receipts</span><strong>{{ receiptRows().length }}</strong></div>
+    <div><span>Payments received</span><strong>₹{{ totalReceipts() | number:'1.2-2' }}</strong></div>
+    <div><span>Discounts / Kasar</span><strong>₹{{ totalDiscount() | number:'1.2-2' }}</strong></div>
+  </section>
+
+  <section class="report-table" aria-live="polite">
+    <div *ngIf="isLoading()" class="empty-state">Loading report...</div>
+    <div class="table-scroll" *ngIf="!isLoading() && (activeReport() === 'DEALS' || activeReport() === 'INVOICES')">
+      <table>
+        <thead><tr><th>Sauda</th><th>Date</th><th>Seller</th><th>Buyer</th><th>Item</th><th class="numeric">Qty</th><th class="numeric">Goods value</th><th class="numeric">Brokerage</th><th class="numeric">Invoice</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of dealRows()">
+            <td class="strong">{{ row.dealNo }}</td><td>{{ row.dealDate | date:'dd MMM yyyy' }}</td><td>{{ row.sellerName }}</td><td>{{ row.buyerName }}</td><td>{{ row.itemName }}</td>
+            <td class="numeric">{{ row.quantity | number:'1.0-3' }} {{ row.unit }}</td><td class="numeric">₹{{ row.goodsAmount | number:'1.2-2' }}</td>
+            <td class="numeric">₹{{ brokerageFor(row) | number:'1.2-2' }}</td>
+            <td class="numeric"><button type="button" class="invoice-button" (click)="downloadInvoice(row)">Download</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <p *ngIf="dealRows().length === 0" class="empty-state">No deals in this date range.</p>
+    </div>
+    <div class="table-scroll" *ngIf="!isLoading() && activeReport() === 'RECEIPTS'">
+      <table>
+        <thead><tr><th>Receipt</th><th>Date</th><th>Party</th><th>Mode</th><th>Reference</th><th class="numeric">Received</th><th class="numeric">Discount</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of receiptRows()">
+            <td class="strong">{{ row.receiptNo }}</td><td>{{ row.paymentDate | date:'dd MMM yyyy' }}</td><td>{{ row.firmName }}</td><td>{{ row.paymentMode }}</td>
+            <td>{{ row.referenceNo || '—' }}</td><td class="numeric">₹{{ row.amount | number:'1.2-2' }}</td><td class="numeric">₹{{ row.discount | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p *ngIf="receiptRows().length === 0" class="empty-state">No receipts in this date range.</p>
+    </div>
+  </section>
+</main>

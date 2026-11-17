@@ -1,0 +1,52 @@
+<main class="item-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">CATALOGUE</p>
+      <h1>Item Master</h1>
+      <p class="subtitle">Manage trade commodities and their default units.</p>
+    </div>
+    <span class="record-count">{{ items().length }} items</span>
+  </header>
+
+  <div *ngIf="errorMessage()" class="message error" role="alert">{{ errorMessage() }}</div>
+  <div *ngIf="successMessage()" class="message success" role="status">{{ successMessage() }}</div>
+
+  <div class="item-layout">
+    <section class="create-pane" aria-labelledby="new-item-title">
+      <h2 id="new-item-title">Add item</h2>
+      <form [formGroup]="itemForm" (ngSubmit)="saveItem()">
+        <label for="item-name">Item name</label>
+        <input id="item-name" type="text" formControlName="name" maxlength="100" placeholder="e.g. POHA REGULAR" autocomplete="off" />
+        <small *ngIf="itemForm.get('name')?.touched && itemForm.get('name')?.invalid">Enter 2 to 100 characters.</small>
+
+        <label for="item-unit">Default unit</label>
+        <select id="item-unit" formControlName="defaultUnit">
+          <option value="TON">TON</option>
+          <option value="BAG">BAG</option>
+          <option value="QUINTAL">QUINTAL</option>
+          <option value="KG">KG</option>
+        </select>
+
+        <button type="submit" [disabled]="isSaving()">{{ isSaving() ? 'Saving...' : 'Add item' }}</button>
+      </form>
+    </section>
+
+    <section class="list-pane" aria-label="Item directory">
+      <div class="list-toolbar">
+        <h2>Saved items</h2>
+        <input type="search" aria-label="Search items" placeholder="Search items or units" [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value)" />
+      </div>
+      <div *ngIf="isLoading()" class="empty-state" role="status">Loading items...</div>
+      <div class="table-wrap" *ngIf="!isLoading()">
+        <table>
+          <thead><tr><th>Item</th><th>Default unit</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of filteredItems()"><td>{{ item.name }}</td><td><span class="unit-badge">{{ item.defaultUnit }}</span></td></tr>
+          </tbody>
+        </table>
+        <p *ngIf="filteredItems().length === 0" class="empty-state">No items match this search.</p>
+      </div>
+      <button *ngIf="errorMessage() && !isLoading()" type="button" class="retry" (click)="loadItems()">Retry loading</button>
+    </section>
+  </div>
+</main>

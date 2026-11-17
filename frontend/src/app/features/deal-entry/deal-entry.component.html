@@ -1,0 +1,181 @@
+<div class="deal-container">
+  <div *ngIf="errorMessage()" class="alert-box error-alert">
+    <span class="icon">&#x26A0;</span>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+  <div *ngIf="successMessage()" class="alert-box success-alert">
+    <span class="icon">&#x2714;</span>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <div *ngIf="isLoadingParties()" class="loading-bar">
+    Connecting to PostgreSQL and loading parties...
+  </div>
+
+  <header class="form-header">
+    <div>
+      <h2>New Sauda Entry (Dual Brokerage)</h2>
+      <span class="subtext">Non-GST internal trade matching</span>
+    </div>
+    <div class="meta-tags">
+      <span class="badge deal-badge">Sauda No: #{{ nextDealNumber() }}</span>
+      <span class="shortcut-tip"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to Save</span>
+    </div>
+  </header>
+
+  <form [formGroup]="dealForm" (ngSubmit)="saveDeal()" class="entry-grid">
+    <div class="panel header-panel">
+      <div class="field">
+        <label>Sauda Date*</label>
+        <input type="date" formControlName="dealDate" class="input-control" tabindex="1" />
+      </div>
+      <div class="field span-2">
+        <label>Deal Remarks</label>
+        <input type="text" formControlName="remarks" placeholder="Delivery timeline or payment conditions..." class="input-control" tabindex="2" />
+      </div>
+    </div>
+
+    <div class="panel dual-parties-panel">
+      <div class="party-box seller-box">
+        <div class="party-head">
+          <label>SELLER (Supplier / Mill)*</label>
+          <span *ngIf="selectedSeller()" class="due-badge">
+            Due: ₹{{ selectedSeller()?.currentDue | number:'1.2-2' }}
+          </span>
+        </div>
+        <div class="autocomplete-wrapper">
+          <input
+            type="text"
+            [value]="sellerSearch()"
+            (input)="sellerSearch.set($any($event.target).value); sellerDropdownOpen.set(true)"
+            (focus)="sellerDropdownOpen.set(true)"
+            placeholder="Type Seller Name, Phone or City..."
+            class="input-control party-input"
+            tabindex="4"
+          />
+          <div *ngIf="sellerDropdownOpen()" class="dropdown-list">
+            <div
+              *ngFor="let p of filteredSellers()"
+              (click)="selectSeller(p)"
+              class="dropdown-item"
+            >
+              <div class="fw-bold">{{ p.firmName }}</div>
+              <small>{{ p.contactPerson }} | {{ p.city }} | {{ p.mobile }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="party-box buyer-box">
+        <div class="party-head">
+          <label>BUYER (Purchaser)*</label>
+          <span *ngIf="selectedBuyer()" class="due-badge">
+            Due: ₹{{ selectedBuyer()?.currentDue | number:'1.2-2' }}
+          </span>
+        </div>
+        <div class="autocomplete-wrapper">
+          <input
+            type="text"
+            [value]="buyerSearch()"
+            (input)="buyerSearch.set($any($event.target).value); buyerDropdownOpen.set(true)"
+            (focus)="buyerDropdownOpen.set(true)"
+            placeholder="Type Buyer Name, Phone or City..."
+            class="input-control party-input"
+            tabindex="5"
+          />
+          <div *ngIf="buyerDropdownOpen()" class="dropdown-list">
+            <div
+              *ngFor="let p of filteredBuyers()"
+              (click)="selectBuyer(p)"
+              class="dropdown-item"
+            >
+              <div class="fw-bold">{{ p.firmName }}</div>
+              <small>{{ p.contactPerson }} | {{ p.city }} | {{ p.mobile }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel commodity-panel">
+      <div class="field span-2">
+        <label>Item / Quality*</label>
+        <select formControlName="itemQuality" class="input-control" (change)="selectItem($any($event.target).value)" tabindex="6">
+          <option *ngFor="let item of items()" [value]="item.name">{{ item.name }}</option>
+        </select>
+        <small *ngIf="!isLoadingItems() && items().length === 0">No items configured. <a routerLink="/items">Add an item</a>.</small>
+      </div>
+      <div class="field">
+        <label>Quantity*</label>
+        <input type="number" formControlName="quantity" class="input-control text-right" tabindex="7" />
+      </div>
+      <div class="field">
+        <label>Unit*</label>
+        <select formControlName="unit" class="input-control" tabindex="8">
+          <option value="TON">TON</option>
+          <option value="BAG">BAG</option>
+          <option value="QUINTAL">QUINTAL</option>
+          <option value="KG">KG</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Deal Rate (₹)*</label>
+        <input type="number" formControlName="dealRate" class="input-control text-right" tabindex="9" />
+      </div>
+      <div class="field">
+        <label>Motor (0-100)</label>
+        <input type="number" formControlName="motor" class="input-control text-right" min="0" max="100" step="1" tabindex="10" />
+      </div>
+    </div>
+
+    <div class="panel brokerage-panel">
+      <div class="brokerage-col seller-rate">
+        <label>Seller Commission Rate (₹/unit)*</label>
+        <input type="number" formControlName="sellerBrokerageRate" class="input-control text-right" tabindex="10" />
+        <div class="brokerage-due-preview">
+          Seller Bill Amount: <strong>₹{{ sellerBrokerageAmount() | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <div class="brokerage-col buyer-rate">
+        <label>Buyer Commission Rate (₹/unit)*</label>
+        <input type="number" formControlName="buyerBrokerageRate" class="input-control text-right" tabindex="11" />
+        <div class="brokerage-due-preview">
+          Buyer Bill Amount: <strong>₹{{ buyerBrokerageAmount() | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <div class="brokerage-summary">
+        <span>Net Brokerage Revenue</span>
+        <h3>₹{{ totalBrokerageRevenue() | number:'1.2-2' }}</h3>
+      </div>
+    </div>
+
+    <div class="panel action-bar">
+      <div class="toggles">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="autoOpenWhatsApp" />
+          Auto-launch WhatsApp tabs on Save
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="autoGeneratePdf" />
+          Auto-generate brokerage bill PDF
+        </label>
+      </div>
+
+      <div class="button-group">
+        <button type="button" (click)="exportPdf()" class="btn btn-secondary">
+          Export PDF
+        </button>
+        <button type="button" (click)="resetForm()" class="btn btn-secondary">
+          Reset (Esc)
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()" tabindex="12">
+          <span *ngIf="!isSubmitting()">Save Deal &amp; Generate Bills (Ctrl+Enter)</span>
+          <span *ngIf="isSubmitting()">Saving to Database...</span>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

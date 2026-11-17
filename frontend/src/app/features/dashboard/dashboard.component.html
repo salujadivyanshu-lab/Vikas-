@@ -1,0 +1,168 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <div>
+      <h2>Brokerage & Collections Dashboard</h2>
+      <p class="subtitle">Live tracking of receivables, aging brackets, and pending settlements</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" routerLink="/parties">Party Master</button>
+      <button class="btn btn-outline" routerLink="/new-deal">+ New Sauda Entry</button>
+      <button class="btn btn-primary" routerLink="/receipts">+ Receive Payment</button>
+    </div>
+  </header>
+
+  <div *ngIf="isLoading()" class="api-status" role="status">Loading live balances...</div>
+  <div *ngIf="errorMessage()" class="api-error" role="alert">
+    {{ errorMessage() }}
+    <button type="button" class="btn btn-outline" (click)="loadDues()">Retry</button>
+  </div>
+
+  <section class="kpi-grid">
+    <div class="kpi-card total-card">
+      <div class="kpi-title">TOTAL BROKERAGE RECEIVABLE</div>
+      <div class="kpi-val">₹{{ totalReceivable() | number:'1.2-2' }}</div>
+      <div class="kpi-meta">{{ activePartyCount() }} Parties with active balances</div>
+    </div>
+
+    <div class="kpi-card seller-card">
+      <div class="kpi-title">SELLER / MILL DUES</div>
+      <div class="kpi-val">₹{{ sellerDues() | number:'1.2-2' }}</div>
+      <div class="kpi-meta">Receivable from suppliers</div>
+    </div>
+
+    <div class="kpi-card buyer-card">
+      <div class="kpi-title">BUYER DUES</div>
+      <div class="kpi-val">₹{{ buyerDues() | number:'1.2-2' }}</div>
+      <div class="kpi-meta">Receivable from purchasers</div>
+    </div>
+
+    <div class="kpi-card alert-card">
+      <div class="kpi-title">CRITICAL OVERDUE (>30 DAYS)</div>
+      <div class="kpi-val text-danger">{{ criticalOverdueCount() }} Parties</div>
+      <div class="kpi-meta">Requires urgent collection push</div>
+    </div>
+
+    <div class="kpi-card seller-card">
+      <div class="kpi-title">BROKERAGE BILLED · {{ selectedFinancialYearLabel() }}</div>
+      <div class="kpi-val">₹{{ periodBilled() | number:'1.2-2' }}</div>
+      <div class="kpi-meta">Bills issued during selected period</div>
+    </div>
+
+    <div class="kpi-card buyer-card">
+      <div class="kpi-title">PAYMENTS RECEIVED · {{ selectedFinancialYearLabel() }}</div>
+      <div class="kpi-val">₹{{ periodReceived() | number:'1.2-2' }}</div>
+      <div class="kpi-meta">Collections received during selected period</div>
+    </div>
+  </section>
+
+  <section class="toolbar-panel">
+    <div class="aging-tabs">
+      <button class="tab-btn" [class.active]="selectedAgingBucket() === 'ALL'" (click)="setAgingBucket('ALL')">
+        All Dues ({{ activePartyCount() }})
+      </button>
+      <button class="tab-btn" [class.active]="selectedAgingBucket() === '0-15'" (click)="setAgingBucket('0-15')">
+        0–15 Days
+      </button>
+      <button class="tab-btn" [class.active]="selectedAgingBucket() === '16-30'" (click)="setAgingBucket('16-30')">
+        16–30 Days
+      </button>
+      <button class="tab-btn badge-warn" [class.active]="selectedAgingBucket() === '31-60'" (click)="setAgingBucket('31-60')">
+        31–60 Days
+      </button>
+      <button class="tab-btn badge-crit" [class.active]="selectedAgingBucket() === '60+'" (click)="setAgingBucket('60+')">
+        60+ Days
+      </button>
+    </div>
+
+    <div class="search-filters">
+      <label class="dashboard-date-filter">Financial year
+        <select [ngModel]="selectedFinancialYear()" (ngModelChange)="selectedFinancialYear.set($event)" class="filter-select">
+          <option *ngFor="let year of financialYears" [value]="year.value">{{ year.label }}</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-outline dashboard-date-apply" (click)="loadDues()" [disabled]="isLoading()">Apply FY</button>
+      <select [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)" class="filter-select">
+        <option value="ALL">All Roles</option>
+        <option value="SELLER">Sellers Only</option>
+        <option value="BUYER">Buyers Only</option>
+      </select>
+
+      <div class="search-box">
+        <input type="text" placeholder="Search party name, city, phone..." [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" class="search-input" />
+      </div>
+    </div>
+  </section>
+
+  <section class="table-container">
+    <table class="dues-table">
+      <thead>
+        <tr>
+          <th>Party & Contact</th>
+          <th>Role</th>
+          <th class="text-right" title="{{ selectedFinancialYearLabel() }}">Billed (FY)</th>
+          <th class="text-right" title="{{ selectedFinancialYearLabel() }}">Received (FY)</th>
+          <th class="text-right">Net Due (₹)</th>
+          <th class="text-center">Aging Bucket</th>
+          <th class="text-right">Goods Status</th>
+          <th class="text-center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filteredDues()" [class.row-critical]="p.oldestUnpaidDays > 60">
+          <td>
+            <div class="party-name">{{ p.firmName }}</div>
+            <div class="party-sub">{{ p.contactPerson }} &bull; {{ p.city }} &bull; {{ p.mobile }}</div>
+          </td>
+
+          <td>
+            <span class="badge" [ngClass]="{
+              'badge-seller': p.role === 'SELLER',
+              'badge-buyer': p.role === 'BUYER',
+              'badge-both': p.role === 'BOTH'
+            }">{{ p.role }}</span>
+          </td>
+
+          <td class="text-right font-mono">₹{{ p.totalBilled | number:'1.2-2' }}</td>
+          <td class="text-right font-mono text-muted">₹{{ p.totalReceived | number:'1.2-2' }}</td>
+
+          <td class="text-right font-mono font-bold text-due">
+            ₹{{ p.netDue | number:'1.2-2' }}
+          </td>
+
+          <td class="text-center">
+            <span class="aging-pill" [ngClass]="{
+              'pill-green': p.oldestUnpaidDays <= 15,
+              'pill-yellow': p.oldestUnpaidDays > 15 && p.oldestUnpaidDays <= 30,
+              'pill-orange': p.oldestUnpaidDays > 30 && p.oldestUnpaidDays <= 60,
+              'pill-red': p.oldestUnpaidDays > 60
+            }">
+              {{ p.oldestUnpaidDays }} Days
+            </span>
+          </td>
+
+          <td class="text-right">
+            <div *ngIf="p.pendingGoodsValue && p.pendingGoodsValue > 0">
+              <span class="font-mono text-goods">₹{{ p.pendingGoodsValue | number:'1.0-0' }}</span>
+              <button class="btn-micro" (click)="sendGoodsPaymentReminder(p)" title="Send Goods Payment Alert">
+                WA
+              </button>
+            </div>
+            <span *ngIf="!p.pendingGoodsValue || p.pendingGoodsValue === 0" class="text-muted">Cleared</span>
+          </td>
+
+          <td class="text-center">
+            <button class="btn-wa" (click)="sendWhatsAppReminder(p)">
+              <span class="wa-icon">&#x2709;</span> Remind Dues
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="filteredDues().length === 0">
+          <td colspan="8" class="no-data">
+            No parties match your selected search or aging filter.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>
