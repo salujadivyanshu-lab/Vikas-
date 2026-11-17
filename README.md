@@ -32,7 +32,7 @@ From the repository root:
 npm run install:all
 ```
 
-Copy `backend/.env.example` to `backend/.env` and set the PostgreSQL credentials before starting the API.
+For local PostgreSQL, copy `backend/.env.example` to `backend/.env` and set the database credentials. The backend also loads the root `.env.local` created by Neon CLI; keep that file private and uncommitted.
 
 ## Run locally
 
@@ -62,8 +62,8 @@ GitHub Pages hosts the Angular frontend, but it does not run the Node API or Pos
 **Security warning:** do not use this public deployment with real business or customer records yet. The current login is enforced only in the browser, and the API endpoints have no server-side authentication; CORS does not prevent direct API access. Use test data until server-side authentication and authorization are added.
 
 1. Push this repository to GitHub and enable **Settings > Pages > GitHub Actions**. The workflow at `.github/workflows/deploy-frontend.yml` builds and publishes the frontend on each push to `main`.
-2. Create a free PostgreSQL project on Neon. Run `backend/schema.sql` against its database, then copy its connection string.
-3. Create a Render Web Service from the repository with root directory `backend`, build command `npm install`, and start command `npm start`. Set `DATABASE_URL` to the Neon connection string, `CORS_ORIGIN` to the GitHub Pages origin (for example `https://YOUR-GITHUB-USERNAME.github.io`), and `NODE_ENV` to `production`.
-4. In GitHub, add the Actions repository variable `API_BASE_URL` with the full Render API URL ending in `/api` (for example `https://YOUR-SERVICE.onrender.com/api`). Push to `main` again to publish the frontend against that API.
+2. Create a Neon project and apply `backend/schema.sql` to its database. The Neon CLI keeps its connection variables in the ignored root `.env.local` file; the backend loads `DATABASE_URL` from there for local runs.
+3. In Render, create a Blueprint from this repository using `render.yaml`. Set the prompted `DATABASE_URL` environment variable from Neon; keep the value in Render, not in GitHub or the repository.
+4. In GitHub, add the Actions repository variable `API_BASE_URL` with the Render service URL ending in `/api` (for example `https://vikas-brokerage-api.onrender.com/api`). The next push to `main` publishes the frontend against that API.
 
 The first request to a sleeping free API may take a little while. Keep database credentials in the Render dashboard, not in the repository.

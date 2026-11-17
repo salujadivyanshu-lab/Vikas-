@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: vikas-brokerage-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://salujadivyanshu-lab.github.io
+      - key: DATABASE_URL
+        sync: false
