@@ -57,13 +57,11 @@ The backend can also be managed independently with `npm --prefix backend run <sc
 
 ## Free hosting
 
-GitHub Pages hosts the Angular frontend, but it does not run the Node API or PostgreSQL. This project uses GitHub Pages for the frontend, Render for the API, and Neon for PostgreSQL; free plans have usage limits and may sleep or change over time.
+GitHub Pages hosts the Angular frontend for free, but it does not run the Node API or PostgreSQL. The frontend-only preview deploys without Neon or Render; API-backed actions such as loading and saving records will not work until a backend is configured.
 
 **Security warning:** do not use this public deployment with real business or customer records yet. The current login is enforced only in the browser, and the API endpoints have no server-side authentication; CORS does not prevent direct API access. Use test data until server-side authentication and authorization are added.
 
 1. Push this repository to GitHub and enable **Settings > Pages > GitHub Actions**. The workflow at `.github/workflows/deploy-frontend.yml` builds and publishes the frontend on each push to `main`.
-2. Create a Neon project and apply `backend/schema.sql` to its database. The Neon CLI keeps its connection variables in the ignored root `.env.local` file; the backend loads `DATABASE_URL` from there for local runs.
-3. In Render, create a Blueprint from this repository using `render.yaml`. Set the prompted `DATABASE_URL` environment variable from Neon; keep the value in Render, not in GitHub or the repository.
-4. In GitHub, add the Actions repository variable `API_BASE_URL` with the Render service URL ending in `/api` (for example `https://vikas-brokerage-api.onrender.com/api`). The next push to `main` publishes the frontend against that API.
+2. No API variable is required for a frontend-only preview. To enable data features later, deploy the backend using `render.yaml`, set its `DATABASE_URL` from Neon, then add the Render API URL ending in `/api` as the GitHub Actions repository variable `API_BASE_URL`.
 
-The first request to a sleeping free API may take a little while. Keep database credentials in the Render dashboard, not in the repository.
+Free backend/database plans have usage limits and may sleep. Keep database credentials in the Render dashboard or ignored `.env.local`, not in the repository.

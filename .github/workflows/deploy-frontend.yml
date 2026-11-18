@@ -35,7 +35,15 @@ jobs:
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
-          node -e "const fs = require('node:fs'); const apiBaseUrl = process.env.API_BASE_URL; if (!apiBaseUrl) throw new Error('Set the API_BASE_URL Actions repository variable to your API URL ending in /api.'); fs.writeFileSync('frontend/src/environments/environment.ts', 'export const environment = { production: true, apiBaseUrl: ' + JSON.stringify(apiBaseUrl.replace(/\\/$/, '')) + ' };\\n');"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const apiBaseUrl = (process.env.API_BASE_URL || '').replace(/\/$/, '');
+          fs.writeFileSync(
+            'frontend/src/environments/environment.ts',
+            `export const environment = { production: true, apiBaseUrl: ${JSON.stringify(apiBaseUrl)} };\n`,
+          );
+          if (!apiBaseUrl) console.log('No API_BASE_URL set; publishing a frontend-only preview.');
+          NODE
 
       - name: Build Angular app
         env:
