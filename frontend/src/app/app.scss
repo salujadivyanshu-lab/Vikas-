@@ -62,6 +62,7 @@
 .nav-link {
   display: flex;
   align-items: center;
+  box-sizing: border-box;
   gap: 10px;
   width: 100%;
   border: 0;
@@ -115,6 +116,7 @@
 }
 
 .logout-btn {
+  box-sizing: border-box;
   margin-top: 18px;
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.4);
@@ -149,22 +151,22 @@
   }
 
   .app-nav {
-    flex-direction: row;
-    gap: 4px;
-    overflow-x: auto;
-    padding-bottom: 4px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 6px;
+    overflow: visible;
+    padding-bottom: 0;
   }
 
   .nav-link {
-    flex: 0 0 auto;
-    width: auto;
-    white-space: nowrap;
+    min-width: 0;
+    width: 100%;
+    white-space: normal;
     padding: 10px 12px;
   }
 
   .logout-btn {
-    flex: 0 0 auto;
-    width: auto;
+    width: 100%;
     margin-top: 4px;
     padding: 10px 14px;
   }
